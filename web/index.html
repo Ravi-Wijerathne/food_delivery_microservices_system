@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Delivery System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #ff5722; color: white; padding: 20px; text-align: center; }
+        h1 { margin-bottom: 10px; }
+        .auth-section { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #ff5722; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        button:hover { background: #e64a19; }
+        .restaurants { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .restaurant { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .restaurant h3 { color: #333; margin-bottom: 10px; }
+        .restaurant p { color: #666; margin: 5px 0; }
+        .menu { margin-top: 15px; }
+        .menu-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+        .order-section { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        #token { font-family: monospace; word-break: break-all; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Food Delivery System</h1>
+        <p>Order from your favorite restaurants</p>
+    </header>
+    
+    <div class="container">
+        <div class="auth-section">
+            <h2>Authentication</h2>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="email" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+            <div class="form-group">
+                <label>Name:</label>
+                <input type="text" id="name" placeholder="Enter name">
+            </div>
+            <button onclick="register()">Register</button>
+            <button onclick="login()">Login</button>
+            <p style="margin-top: 15px;"><strong>Token:</strong> <span id="token">Not logged in</span></p>
+        </div>
+
+        <div class="auth-section">
+            <h2>Restaurants</h2>
+            <button onclick="loadRestaurants()">Load Restaurants</button>
+            <div id="restaurants" class="restaurants"></div>
+        </div>
+
+        <div class="order-section hidden" id="orderSection">
+            <h2>Place Order</h2>
+            <div class="form-group">
+                <label>Restaurant ID:</label>
+                <input type="text" id="restaurantId" placeholder="e.g., rest-1">
+            </div>
+            <div class="form-group">
+                <label>Delivery Address:</label>
+                <input type="text" id="address" placeholder="Enter delivery address">
+            </div>
+            <div class="form-group">
+                <label>Item Name:</label>
+                <input type="text" id="itemName" placeholder="e.g., Margherita Pizza">
+            </div>
+            <div class="form-group">
+                <label>Price:</label>
+                <input type="number" id="itemPrice" step="0.01" placeholder="e.g., 12.99">
+            </div>
+            <div class="form-group">
+                <label>Quantity:</label>
+                <input type="number" id="itemQty" value="1" min="1">
+            </div>
+            <button onclick="placeOrder()">Place Order</button>
+            <div id="orderResult" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:8080/api';
+        let token = '';
+
+        async function register() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const name = document.getElementById('name').value;
+
+            try {
+                const res = await fetch(`${API}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, name })
+                });
+                const data = await res.json();
+                if (data.token) {
+                    token = data.token;
+                    document.getElementById('token').textContent = token.substring(0, 50) + '...';
+                    document.getElementById('orderSection').classList.remove('hidden');
+                    alert('Registration successful!');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${API}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (data.token) {
+                    token = data.token;
+                    document.getElementById('token').textContent = token.substring(0, 50) + '...';
+                    document.getElementById('orderSection').classList.remove('hidden');
+                    alert('Login successful!');
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function loadRestaurants() {
+            try {
+                const res = await fetch(`${API}/restaurants`);
+                const data = await res.json();
+                const container = document.getElementById('restaurants');
+                container.innerHTML = data.map(r => `
+                    <div class="restaurant">
+                        <h3>${r.name}</h3>
+                        <p>Cuisine: ${r.cuisine}</p>
+                        <p>Rating: ${r.rating}</p>
+                        <p>Address: ${r.address}</p>
+                        <button onclick="loadMenu('${r.id}')" style="margin-top:10px;">View Menu</button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function loadMenu(id) {
+            try {
+                const res = await fetch(`${API}/menu/${id}`);
+                const data = await res.json();
+                alert(`Menu for ${data.restaurant_name}:\n\n` + 
+                    data.items.map(i => `${i.name} - $${i.price}`).join('\n'));
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function placeOrder() {
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            const restaurantId = document.getElementById('restaurantId').value;
+            const address = document.getElementById('address').value;
+            const itemName = document.getElementById('itemName').value;
+            const price = parseFloat(document.getElementById('itemPrice').value);
+            const qty = parseInt(document.getElementById('itemQty').value);
+
+            try {
+                const res = await fetch(`${API}/orders`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        user_id: 'user-1',
+                        restaurant_id: restaurantId,
+                        items: [{
+                            menu_item_id: 'item-1',
+                            name: itemName,
+                            quantity: qty,
+                            price: price
+                        }],
+                        delivery_address: address
+                    })
+                });
+                const data = await res.json();
+                document.getElementById('orderResult').innerHTML = `
+                    <p><strong>Order ID:</strong> ${data.id}</p>
+                    <p><strong>Status:</strong> ${data.status}</p>
+                    <p><strong>Total:</strong> $${data.total_amount}</p>
+                `;
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

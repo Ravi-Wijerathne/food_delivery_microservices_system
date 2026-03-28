@@ -19,7 +19,10 @@ import (
 var mq *RabbitMQ
 
 func main() {
-	InitStore()
+	if err := InitMongoDB(); err != nil {
+		log.Printf("Warning: Failed to connect to MongoDB: %v", err)
+		log.Println("Using in-memory storage")
+	}
 
 	var err error
 	mq, err = NewRabbitMQ()

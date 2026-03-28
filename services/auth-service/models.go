@@ -1,61 +1,79 @@
 package main
 
-import "time"
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
 
 type User struct {
-	ID        string    `json:"id"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string    `json:"id" bson:"_id"`
+	Email     string    `json:"email" bson:"email"`
+	Password  string    `json:"-" bson:"password"`
+	Name      string    `json:"name" bson:"name"`
+	CreatedAt time.Time `json:"created_at" bson:"created_at"`
 }
 
-type UserStore struct {
-	users  map[string]User
-	emails map[string]string
-}
+var client *mongo.Client
+var userCollection *mongo.Collection
 
-var store *UserStore
+func InitMongoDB() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-func InitStore() {
-	store = &UserStore{
-		users:  make(map[string]User),
-		emails: make(map[string]string),
+	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
+	opts := options.Client().ApplyURI("mongodb://localhost:27017").SetServerAPIOptions(serverAPI)
+
+	c, err := mongo.Connect(ctx, opts)
+	if err != nil {
+		return fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
-}
 
-func SaveUser(user User) error {
-	if _, exists := store.emails[user.Email]; exists {
-		return ErrUserExists
+	if err = c.Ping(ctx, nil); err != nil {
+		return fmt.Errorf("failed to ping MongoDB: %w", err)
 	}
-	store.users[user.ID] = user
-	store.emails[user.Email] = user.ID
+
+	client = c
+	userCollection = client.Database("auth-db").Collection("users")
+
+	fmt.Println("Connected to MongoDB")
 	return nil
 }
 
+func SaveUser(user User) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := userCollection.InsertOne(ctx, user)
+	return err
+}
+
 func FindUserByEmail(email string) (User, error) {
-	if id, exists := store.emails[email]; exists {
-		return store.users[id], nil
-	}
-	return User{}, ErrUserNotFound
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var user User
+	err := userCollection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	return user, err
 }
 
 func FindUserByID(id string) (User, error) {
-	if user, exists := store.users[id]; exists {
-		return user, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var user User
+	err := userCollection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
+	return user, err
+}
+
+func CloseMongoDB() {
+	if client != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		client.Disconnect(ctx)
 	}
-	return User{}, ErrUserNotFound
-}
-
-var (
-	ErrUserExists   = &AuthError{"user already exists"}
-	ErrUserNotFound = &AuthError{"user not found"}
-)
-
-type AuthError struct {
-	Message string
-}
-
-func (e *AuthError) Error() string {
-	return e.Message
 }
