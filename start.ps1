@@ -33,7 +33,6 @@ Write-Host "`n[1/5] Checking Prerequisites..." -ForegroundColor Yellow
 $prereqs = @{
     "Go" = @{ cmd = "go"; args = "version"; pattern = "go" }
     "Docker" = @{ cmd = "docker"; args = "--version"; pattern = "Docker" }
-    "kubectl" = @{ cmd = "kubectl"; args = "version --client"; pattern = "kubectl" }
 }
 
 $allGood = $true

@@ -11,12 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"common"
 	pb "github.com/food_delivery_microservices_system/proto"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 )
 
-var mq *RabbitMQ
+var mq *common.RabbitMQ
 
 func main() {
 	if err := InitMongoDB(); err != nil {
@@ -25,7 +26,7 @@ func main() {
 	}
 
 	var err error
-	mq, err = NewRabbitMQ()
+	mq, err = common.NewRabbitMQ()
 	if err != nil {
 		log.Printf("Warning: Failed to connect to RabbitMQ: %v", err)
 	} else {
@@ -91,7 +92,7 @@ func (s *orderGrpcServer) CreateOrder(ctx context.Context, req *pb.CreateOrderRe
 	}
 
 	if mq != nil {
-		event := Event{
+		event := common.Event{
 			Type:      "OrderCreated",
 			OrderID:   order.ID,
 			UserID:    order.UserID,
@@ -99,9 +100,7 @@ func (s *orderGrpcServer) CreateOrder(ctx context.Context, req *pb.CreateOrderRe
 			Status:    string(order.Status),
 			Timestamp: time.Now(),
 		}
-		if err := mq.Publish(event); err != nil {
-			log.Printf("Failed to publish event: %v", err)
-		}
+		mq.PublishWithRetry(event)
 	}
 
 	return &pb.CreateOrderResponse{
@@ -172,5 +171,9 @@ func convertItemsToProto(items []OrderItem) []*pb.OrderItem {
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
+	json.NewEncoder(w).Encode(map[string]string{
+		"service": "order",
+		"status":  "healthy",
+		"time":    time.Now().Format(time.RFC3339),
+	})
 }

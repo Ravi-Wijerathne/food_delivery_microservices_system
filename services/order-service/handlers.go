@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"common"
 	"github.com/gorilla/mux"
 )
 
@@ -51,8 +52,10 @@ func CreateOrderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("[ORDER] Order created: %s", order.ID)
+
 	if mq != nil {
-		event := Event{
+		event := common.Event{
 			Type:      "OrderCreated",
 			OrderID:   order.ID,
 			UserID:    order.UserID,
@@ -60,8 +63,8 @@ func CreateOrderHandler(w http.ResponseWriter, r *http.Request) {
 			Status:    string(order.Status),
 			Timestamp: time.Now(),
 		}
-		if err := mq.Publish(event); err != nil {
-			log.Printf("Failed to publish event: %v", err)
+		if err := mq.PublishWithRetry(event); err != nil {
+			log.Printf("[ORDER] Failed to publish event: %v", err)
 		}
 	}
 
