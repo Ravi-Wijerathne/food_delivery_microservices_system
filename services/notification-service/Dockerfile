@@ -1,11 +1,12 @@
 FROM golang:1.26-alpine AS builder
 
-WORKDIR /app
+WORKDIR /src/notification-service
 
-COPY go.mod go.sum ./
+COPY common /src/common
+COPY notification-service/go.mod notification-service/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY notification-service .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o notification-service .
 
@@ -15,7 +16,7 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 
-COPY --from=builder /app/notification-service .
+COPY --from=builder /src/notification-service/notification-service .
 
 EXPOSE 8087
 

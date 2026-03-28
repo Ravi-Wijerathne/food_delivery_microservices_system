@@ -17,8 +17,16 @@ spec:
       containers:
       - name: gateway
         image: gateway:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
+        env:
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service:8081"
+        - name: RESTAURANT_SERVICE_URL
+          value: "http://restaurant-service:8082"
+        - name: ORDER_SERVICE_URL
+          value: "http://order-service:8083"
 ---
 apiVersion: v1
 kind: Service
