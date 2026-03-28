@@ -9,14 +9,25 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	pb "github.com/food_delivery_microservices_system/proto"
 	"github.com/gorilla/mux"
 	"google.golang.org/grpc"
 )
 
+var mq *RabbitMQ
+
 func main() {
 	InitStore()
+
+	var err error
+	mq, err = NewRabbitMQ()
+	if err != nil {
+		log.Printf("Warning: Failed to connect to RabbitMQ: %v", err)
+	} else {
+		log.Println("Connected to RabbitMQ")
+	}
 
 	go func() {
 		r := mux.NewRouter()
@@ -45,6 +56,10 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT)
 	<-sigCh
+
+	if mq != nil {
+		mq.Close()
+	}
 	log.Println("Shutting down...")
 }
 
@@ -70,6 +85,20 @@ func (s *orderGrpcServer) CreateOrder(ctx context.Context, req *pb.CreateOrderRe
 
 	if err := SaveOrder(order); err != nil {
 		return nil, err
+	}
+
+	if mq != nil {
+		event := Event{
+			Type:      "OrderCreated",
+			OrderID:   order.ID,
+			UserID:    order.UserID,
+			Amount:    order.TotalAmount,
+			Status:    string(order.Status),
+			Timestamp: time.Now(),
+		}
+		if err := mq.Publish(event); err != nil {
+			log.Printf("Failed to publish event: %v", err)
+		}
 	}
 
 	return &pb.CreateOrderResponse{

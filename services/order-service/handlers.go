@@ -51,6 +51,20 @@ func CreateOrderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if mq != nil {
+		event := Event{
+			Type:      "OrderCreated",
+			OrderID:   order.ID,
+			UserID:    order.UserID,
+			Amount:    order.TotalAmount,
+			Status:    string(order.Status),
+			Timestamp: time.Now(),
+		}
+		if err := mq.Publish(event); err != nil {
+			log.Printf("Failed to publish event: %v", err)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(order)
