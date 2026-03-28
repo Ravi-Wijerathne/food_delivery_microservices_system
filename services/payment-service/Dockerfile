@@ -1,11 +1,12 @@
 FROM golang:1.26-alpine AS builder
 
-WORKDIR /app
+WORKDIR /src/payment-service
 
-COPY go.mod go.sum ./
+COPY common /src/common
+COPY payment-service/go.mod payment-service/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY payment-service .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o payment-service .
 
@@ -15,7 +16,7 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 
-COPY --from=builder /app/payment-service .
+COPY --from=builder /src/payment-service/payment-service .
 
 EXPOSE 8085
 

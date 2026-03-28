@@ -282,7 +282,7 @@ curl http://localhost:8080/api/health
 
 ### Access RabbitMQ Management UI
 ```bash
-kubectl port-forward svc/rabbitmq 15672:15672
+kubectl port-forward svc/rabbitmq-service 15672:15672
 # Open http://localhost:15672 (guest/guest)
 ```
 

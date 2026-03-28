@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -20,13 +22,21 @@ type User struct {
 
 var client *mongo.Client
 var userCollection *mongo.Collection
+var usersByEmail = make(map[string]User)
+var usersByID = make(map[string]User)
+var usersMu sync.RWMutex
 
 func InitMongoDB() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	mongoURI := os.Getenv("MONGO_URI")
+	if mongoURI == "" {
+		mongoURI = "mongodb://localhost:27017"
+	}
+
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI("mongodb://localhost:27017").SetServerAPIOptions(serverAPI)
+	opts := options.Client().ApplyURI(mongoURI).SetServerAPIOptions(serverAPI)
 
 	c, err := mongo.Connect(ctx, opts)
 	if err != nil {
@@ -45,6 +55,19 @@ func InitMongoDB() error {
 }
 
 func SaveUser(user User) error {
+	if userCollection == nil {
+		usersMu.Lock()
+		defer usersMu.Unlock()
+
+		if _, exists := usersByEmail[user.Email]; exists {
+			return fmt.Errorf("user already exists")
+		}
+
+		usersByEmail[user.Email] = user
+		usersByID[user.ID] = user
+		return nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -53,6 +76,17 @@ func SaveUser(user User) error {
 }
 
 func FindUserByEmail(email string) (User, error) {
+	if userCollection == nil {
+		usersMu.RLock()
+		defer usersMu.RUnlock()
+
+		user, ok := usersByEmail[email]
+		if !ok {
+			return User{}, fmt.Errorf("user not found")
+		}
+		return user, nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -62,6 +96,17 @@ func FindUserByEmail(email string) (User, error) {
 }
 
 func FindUserByID(id string) (User, error) {
+	if userCollection == nil {
+		usersMu.RLock()
+		defer usersMu.RUnlock()
+
+		user, ok := usersByID[id]
+		if !ok {
+			return User{}, fmt.Errorf("user not found")
+		}
+		return user, nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

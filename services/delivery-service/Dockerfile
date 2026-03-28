@@ -1,11 +1,12 @@
 FROM golang:1.26-alpine AS builder
 
-WORKDIR /app
+WORKDIR /src/delivery-service
 
-COPY go.mod go.sum ./
+COPY common /src/common
+COPY delivery-service/go.mod delivery-service/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY delivery-service .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o delivery-service .
 
@@ -15,7 +16,7 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 
-COPY --from=builder /app/delivery-service .
+COPY --from=builder /src/delivery-service/delivery-service .
 
 EXPOSE 8086
 

@@ -34,41 +34,48 @@ services:
 
   order-service:
     build:
-      context: ./services/order-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/order-service/Dockerfile
     ports:
       - "8083:8083"
       - "8084:8084"
     environment:
       - MONGO_URI=mongodb://mongodb:27017
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - mongodb
       - rabbitmq
 
   payment-service:
     build:
-      context: ./services/payment-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: payment-service/Dockerfile
     ports:
       - "8085:8085"
+    environment:
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - rabbitmq
 
   delivery-service:
     build:
-      context: ./services/delivery-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: delivery-service/Dockerfile
     ports:
       - "8086:8086"
+    environment:
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - rabbitmq
 
   notification-service:
     build:
-      context: ./services/notification-service
-      dockerfile: Dockerfile
+      context: ./services
+      dockerfile: notification-service/Dockerfile
     ports:
       - "8087:8087"
+    environment:
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - rabbitmq
 
