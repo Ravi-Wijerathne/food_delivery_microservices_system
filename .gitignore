@@ -1,9 +1,10 @@
-# Binaries
+# Binaries - compiled executables
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+*.service
 
 # Test binary
 *.test
@@ -19,16 +20,48 @@ vendor/
 .vscode/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+nul
 
 # Logs
 *.log
+logs/
 
 # Build artifacts
 gateway/gateway
 services/*/auth-service
 services/*/restaurant-service
 services/*/order-service
+services/*/payment-service
+services/*/delivery-service
+services/*/notification-service
+
+# Go workspace
+go.work
+go.work.sum
+
+# Environment
+.env
+.env.local
+*.env
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+
+# Terraform (if used)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Docker volumes
+volumes/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
