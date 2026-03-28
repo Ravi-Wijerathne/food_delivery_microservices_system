@@ -73,6 +73,58 @@ food_delivery_microservices_system/
 └── README.md
 ```
 
+## First-Time Setup (Recommended)
+
+If this is your first time running the project, use this checklist before any other section.
+
+### 1. Clone and Enter Project
+
+```bash
+git clone https://github.com/Ravi-Wijerathne/food_delivery_microservices_system.git
+cd food_delivery_microservices_system
+```
+
+### 2. Build Local Docker Images (Required for Kind)
+
+```bash
+docker build -t auth-service:latest ./services/auth-service
+docker build -t restaurant-service:latest ./services/restaurant-service
+docker build -t order-service:latest -f services/order-service/Dockerfile .
+docker build -t payment-service:latest -f services/payment-service/Dockerfile ./services
+docker build -t delivery-service:latest -f services/delivery-service/Dockerfile ./services
+docker build -t notification-service:latest -f services/notification-service/Dockerfile ./services
+docker build -t gateway:latest ./gateway
+```
+
+### 3. Create Kind Cluster and Load Images
+
+```bash
+kind create cluster --name food-delivery
+
+kind load docker-image auth-service:latest --name food-delivery
+kind load docker-image restaurant-service:latest --name food-delivery
+kind load docker-image order-service:latest --name food-delivery
+kind load docker-image payment-service:latest --name food-delivery
+kind load docker-image delivery-service:latest --name food-delivery
+kind load docker-image notification-service:latest --name food-delivery
+kind load docker-image gateway:latest --name food-delivery
+```
+
+### 4. Deploy Everything
+
+```bash
+kubectl apply -f deployments
+kubectl get pods
+kubectl get svc
+```
+
+### 5. Quick Functional Check
+
+```bash
+kubectl port-forward svc/gateway 8080:80
+curl http://localhost:8080/api/health
+```
+
 ## Quick Start (Local Development)
 
 ### Option 1: Run Services Manually
@@ -148,6 +200,19 @@ docker-compose logs -f
 
 # Stop all services
 docker-compose down
+```
+
+Note: On some machines, `rabbitmq` may take a few seconds longer to become ready.
+If `payment-service`, `delivery-service`, or `notification-service` exits on first startup, run:
+
+```bash
+docker-compose up -d
+```
+
+again and re-check with:
+
+```bash
+docker-compose ps --all
 ```
 
 ## Testing the Application
@@ -236,6 +301,15 @@ tail -f services/notification-service/notification.log
 # Create Kind cluster
 kind create cluster --name food-delivery
 
+# Build images first (skip if already built)
+docker build -t auth-service:latest ./services/auth-service
+docker build -t restaurant-service:latest ./services/restaurant-service
+docker build -t order-service:latest -f services/order-service/Dockerfile .
+docker build -t payment-service:latest -f services/payment-service/Dockerfile ./services
+docker build -t delivery-service:latest -f services/delivery-service/Dockerfile ./services
+docker build -t notification-service:latest -f services/notification-service/Dockerfile ./services
+docker build -t gateway:latest ./gateway
+
 # Build and load images
 kind load docker-image auth-service:latest
 kind load docker-image restaurant-service:latest
@@ -261,6 +335,17 @@ kubectl apply -f deployments/gateway.yaml
 # Check status
 kubectl get pods
 kubectl get services
+
+# Wait for rollouts (recommended)
+kubectl rollout status deployment/mongodb --timeout=180s
+kubectl rollout status deployment/rabbitmq --timeout=180s
+kubectl rollout status deployment/auth-service --timeout=180s
+kubectl rollout status deployment/restaurant-service --timeout=180s
+kubectl rollout status deployment/order-service --timeout=180s
+kubectl rollout status deployment/payment-service --timeout=180s
+kubectl rollout status deployment/delivery-service --timeout=180s
+kubectl rollout status deployment/notification-service --timeout=180s
+kubectl rollout status deployment/gateway --timeout=180s
 
 # View logs
 kubectl logs -l app=auth-service
@@ -310,6 +395,12 @@ netstat -ano | findstr :8080
 
 # Kill process
 taskkill /PID <PID> /F
+```
+
+### Reset Kind Cluster (If API Server Is Unreachable)
+```bash
+kind delete cluster --name food-delivery
+kind create cluster --name food-delivery
 ```
 
 ### Docker Issues
