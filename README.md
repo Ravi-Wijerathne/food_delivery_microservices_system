@@ -70,8 +70,68 @@ food_delivery_microservices_system/
 ├── deployments/              # Kubernetes manifests
 ├── web/                     # Web UI
 ├── docker-compose.yml       # Docker Compose configuration
+├── start.ps1                # Automation script - starts all services
+├── cleanup.ps1              # Automation script - stops all services
+├── deploy-k8s.ps1           # Automation script - deploys to Kubernetes
 └── README.md
 ```
+
+## Automation Scripts
+
+We provide PowerShell scripts to automate the entire startup process.
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `start.ps1` | Full automation - checks prerequisites, starts infrastructure, builds and runs all services |
+| `cleanup.ps1` | Stops all services and removes Docker containers |
+| `deploy-k8s.ps1` | Deploys the entire system to Kubernetes (Kind cluster) |
+
+### Usage
+
+#### Option 1: Automated Startup (Recommended)
+```powershell
+# Run the full startup script
+.\start.ps1
+```
+
+The script will:
+1. Check all prerequisites (Go, Docker, kubectl)
+2. Start MongoDB and RabbitMQ containers
+3. Build all Go services
+4. Start all services in the correct order
+5. Verify all health endpoints
+
+#### Option 2: Cleanup
+```powershell
+# Stop all services and remove containers
+.\cleanup.ps1
+```
+
+#### Option 3: Kubernetes Deployment
+```powershell
+# Deploy to Kubernetes (requires Kind)
+.\deploy-k8s.ps1
+```
+
+#### Script Options
+
+```powershell
+# Skip building (use existing binaries)
+.\start.ps1 -SkipBuild
+
+# Use Docker Compose instead
+.\start.ps1 -UseDockerCompose
+
+# Deploy to Kubernetes
+.\deploy-k8s.ps1
+
+# Delete Kubernetes cluster
+.\deploy-k8s.ps1 -DeleteCluster
+```
+
+---
 
 ## Quick Start (Local Development)
 
