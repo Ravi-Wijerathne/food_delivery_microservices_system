@@ -1,14 +1,13 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
+	"common"
 )
 
 type Payment struct {
@@ -23,39 +22,54 @@ type Payment struct {
 var payments = make(map[string]Payment)
 
 func main() {
-	mq, err := NewRabbitMQ()
+	log.Println("[PAYMENT] Starting Payment Service...")
+
+	mq, err := common.NewRabbitMQ()
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+		log.Fatalf("[PAYMENT] Failed to connect to RabbitMQ: %v", err)
 	}
 	defer mq.Close()
 
-	err = mq.Consume("OrderCreated", handleOrderCreated)
+	err = mq.ConsumeWithRetry("OrderCreated", handleOrderCreated)
 	if err != nil {
-		log.Fatalf("Failed to consume: %v", err)
+		log.Fatalf("[PAYMENT] Failed to consume: %v", err)
 	}
 
 	go func() {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
-		})
-		log.Println("Payment HTTP Service starting on :8085")
+		mux.HandleFunc("/health", healthHandler)
+		mux.HandleFunc("/payments", listPaymentsHandler)
+		log.Println("[PAYMENT] HTTP Service starting on :8085")
 		log.Fatal(http.ListenAndServe(":8085", mux))
 	}()
 
-	log.Println("Payment Service waiting for messages...")
+	log.Println("[PAYMENT] Service ready, waiting for messages...")
 	select {}
 }
 
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]string{
+		"service": "payment",
+		"status":  "healthy",
+		"time":    time.Now().Format(time.RFC3339),
+	})
+}
+
+func listPaymentsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(payments)
+}
+
 func handleOrderCreated(data []byte) error {
-	var event Event
+	var event common.Event
 	if err := json.Unmarshal(data, &event); err != nil {
+		log.Printf("[PAYMENT] ERROR: Failed to unmarshal event: %v", err)
 		return err
 	}
 
-	log.Printf("Processing payment for order: %s, amount: %.2f", event.OrderID, event.Amount)
+	log.Printf("[PAYMENT] Processing payment for order: %s, amount: $%.2f", event.OrderID, event.Amount)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(500 * time.Millisecond)
 
 	payment := Payment{
 		ID:        fmt.Sprintf("pay-%d", time.Now().Unix()),
@@ -67,141 +81,22 @@ func handleOrderCreated(data []byte) error {
 	}
 	payments[payment.ID] = payment
 
-	log.Printf("Payment processed: %s for order: %s", payment.ID, payment.OrderID)
+	log.Printf("[PAYMENT] SUCCESS: Payment %s processed for order: %s", payment.ID, event.OrderID)
 
 	event.Type = "PaymentProcessed"
 	event.Timestamp = time.Now()
-	mq, _ := NewRabbitMQ()
-	if mq != nil {
-		mq.Publish(event)
-		mq.Close()
+
+	mq, err := common.NewRabbitMQ()
+	if err != nil {
+		log.Printf("[PAYMENT] ERROR: Failed to create RabbitMQ connection: %v", err)
+		return err
+	}
+	defer mq.Close()
+
+	if err := mq.PublishWithRetry(event); err != nil {
+		log.Printf("[PAYMENT] ERROR: Failed to publish PaymentProcessed event: %v", err)
+		return err
 	}
 
 	return nil
-}
-
-type Event struct {
-	Type      string    `json:"type"`
-	OrderID   string    `json:"order_id"`
-	UserID    string    `json:"user_id"`
-	Amount    float64   `json:"amount"`
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-type RabbitMQ struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
-}
-
-func NewRabbitMQ() (*RabbitMQ, error) {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	if err != nil {
-		return nil, err
-	}
-
-	ch, err := conn.Channel()
-	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	err = ch.ExchangeDeclare(
-		"orders",
-		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		ch.Close()
-		conn.Close()
-		return nil, err
-	}
-
-	return &RabbitMQ{conn: conn, channel: ch}, nil
-}
-
-func (r *RabbitMQ) Publish(event Event) error {
-	body, _ := json.Marshal(event)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err := r.channel.PublishWithContext(ctx,
-		"orders",
-		event.Type,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType: "application/json",
-			Body:        body,
-		},
-	)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("Published event: %s for order: %s", event.Type, event.OrderID)
-	return nil
-}
-
-func (r *RabbitMQ) Consume(eventType string, handler func([]byte) error) error {
-	q, err := r.channel.QueueDeclare(
-		"",
-		false,
-		true,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = r.channel.QueueBind(
-		q.Name,
-		eventType,
-		"orders",
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	msgs, err := r.channel.Consume(
-		q.Name,
-		"",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		for d := range msgs {
-			log.Printf("Received message: %s", d.Body)
-			if err := handler(d.Body); err != nil {
-				log.Printf("Error handling message: %v", err)
-			}
-		}
-	}()
-
-	return nil
-}
-
-func (r *RabbitMQ) Close() {
-	if r.channel != nil {
-		r.channel.Close()
-	}
-	if r.conn != nil {
-		r.conn.Close()
-	}
 }

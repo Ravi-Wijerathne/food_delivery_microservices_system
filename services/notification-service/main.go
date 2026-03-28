@@ -7,46 +7,54 @@ import (
 	"net/http"
 	"time"
 
-	amqp "github.com/rabbitmq/amqp091-go"
+	"common"
 )
 
 func main() {
-	mq, err := NewRabbitMQ()
+	log.Println("[NOTIFICATION] Starting Notification Service...")
+
+	mq, err := common.NewRabbitMQ()
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+		log.Fatalf("[NOTIFICATION] Failed to connect to RabbitMQ: %v", err)
 	}
 	defer mq.Close()
 
-	err = mq.Consume("OrderCreated", handleOrderCreated)
+	err = mq.ConsumeWithRetry("OrderCreated", handleOrderCreated)
 	if err != nil {
-		log.Fatalf("Failed to consume OrderCreated: %v", err)
+		log.Fatalf("[NOTIFICATION] Failed to consume OrderCreated: %v", err)
 	}
 
-	err = mq.Consume("PaymentProcessed", handlePaymentProcessed)
+	err = mq.ConsumeWithRetry("PaymentProcessed", handlePaymentProcessed)
 	if err != nil {
-		log.Fatalf("Failed to consume PaymentProcessed: %v", err)
+		log.Fatalf("[NOTIFICATION] Failed to consume PaymentProcessed: %v", err)
 	}
 
-	err = mq.Consume("DeliveryAssigned", handleDeliveryAssigned)
+	err = mq.ConsumeWithRetry("DeliveryAssigned", handleDeliveryAssigned)
 	if err != nil {
-		log.Fatalf("Failed to consume DeliveryAssigned: %v", err)
+		log.Fatalf("[NOTIFICATION] Failed to consume DeliveryAssigned: %v", err)
 	}
 
 	go func() {
 		mux := http.NewServeMux()
-		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-			json.NewEncoder(w).Encode(map[string]string{"status": "healthy"})
-		})
-		log.Println("Notification HTTP Service starting on :8087")
+		mux.HandleFunc("/health", healthHandler)
+		log.Println("[NOTIFICATION] HTTP Service starting on :8087")
 		log.Fatal(http.ListenAndServe(":8087", mux))
 	}()
 
-	log.Println("Notification Service waiting for messages...")
+	log.Println("[NOTIFICATION] Service ready, waiting for messages...")
 	select {}
 }
 
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode(map[string]string{
+		"service": "notification",
+		"status":  "healthy",
+		"time":    time.Now().Format(time.RFC3339),
+	})
+}
+
 func handleOrderCreated(data []byte) error {
-	var event Event
+	var event common.Event
 	if err := json.Unmarshal(data, &event); err != nil {
 		return err
 	}
@@ -56,7 +64,7 @@ func handleOrderCreated(data []byte) error {
 }
 
 func handlePaymentProcessed(data []byte) error {
-	var event Event
+	var event common.Event
 	if err := json.Unmarshal(data, &event); err != nil {
 		return err
 	}
@@ -66,113 +74,11 @@ func handlePaymentProcessed(data []byte) error {
 }
 
 func handleDeliveryAssigned(data []byte) error {
-	var event Event
+	var event common.Event
 	if err := json.Unmarshal(data, &event); err != nil {
 		return err
 	}
 
 	fmt.Printf("[NOTIFICATION] Delivery Assigned: A driver has been assigned to order %s\n", event.OrderID)
 	return nil
-}
-
-type Event struct {
-	Type      string    `json:"type"`
-	OrderID   string    `json:"order_id"`
-	UserID    string    `json:"user_id"`
-	Amount    float64   `json:"amount"`
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-type RabbitMQ struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
-}
-
-func NewRabbitMQ() (*RabbitMQ, error) {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	if err != nil {
-		return nil, err
-	}
-
-	ch, err := conn.Channel()
-	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	err = ch.ExchangeDeclare(
-		"orders",
-		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		ch.Close()
-		conn.Close()
-		return nil, err
-	}
-
-	return &RabbitMQ{conn: conn, channel: ch}, nil
-}
-
-func (r *RabbitMQ) Consume(eventType string, handler func([]byte) error) error {
-	q, err := r.channel.QueueDeclare(
-		"",
-		false,
-		true,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = r.channel.QueueBind(
-		q.Name,
-		eventType,
-		"orders",
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	msgs, err := r.channel.Consume(
-		q.Name,
-		"",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		for d := range msgs {
-			log.Printf("Received message: %s", d.Body)
-			if err := handler(d.Body); err != nil {
-				log.Printf("Error handling message: %v", err)
-			}
-		}
-	}()
-
-	return nil
-}
-
-func (r *RabbitMQ) Close() {
-	if r.channel != nil {
-		r.channel.Close()
-	}
-	if r.conn != nil {
-		r.conn.Close()
-	}
 }
