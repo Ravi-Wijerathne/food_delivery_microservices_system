@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/food-delivery-microservices_system/proto";
+
+message PaymentRequest {
+    string order_id = 1;
+    string user_id = 2;
+    double amount = 3;
+    string payment_method = 4;
+}
+
+message PaymentResponse {
+    string payment_id = 1;
+    string order_id = 2;
+    string status = 3;
+    double amount = 4;
+    string message = 5;
+}
+
+message RefundRequest {
+    string payment_id = 1;
+    string reason = 2;
+}
+
+message RefundResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+service PaymentService {
+    rpc ProcessPayment(PaymentRequest) returns (PaymentResponse);
+    rpc RefundPayment(RefundRequest) returns (RefundResponse);
+}
