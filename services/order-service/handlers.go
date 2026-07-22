@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"common"
+	pb "github.com/food_delivery_microservices_system/proto"
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type CreateOrderRequest struct {
@@ -29,9 +34,56 @@ func CreateOrderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 1. Verify User via gRPC
+	userSvcURL := os.Getenv("USER_SERVICE_GRPC_URL")
+	if userSvcURL == "" {
+		userSvcURL = "localhost:9088" // default local
+	}
+	userConn, err := grpc.Dial(userSvcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Printf("Failed to connect to User Service: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+	defer userConn.Close()
+
+	userClient := pb.NewUserServiceClient(userConn)
+	_, err = userClient.GetUser(context.Background(), &pb.GetUserRequest{Id: req.UserID})
+	if err != nil {
+		log.Printf("User not found or error: %v", err)
+		http.Error(w, "Invalid User ID", http.StatusBadRequest)
+		return
+	}
+
+	// 2. Verify Restaurant Menu Items via gRPC and calculate total
+	restSvcURL := os.Getenv("RESTAURANT_SERVICE_GRPC_URL")
+	if restSvcURL == "" {
+		restSvcURL = "localhost:9082" // default local
+	}
+	restConn, err := grpc.Dial(restSvcURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Printf("Failed to connect to Restaurant Service: %v", err)
+		http.Error(w, "Internal error", http.StatusInternalServerError)
+		return
+	}
+	defer restConn.Close()
+
+	restClient := pb.NewRestaurantServiceClient(restConn)
 	var total float64
-	for _, item := range req.Items {
-		total += item.Price * float64(item.Quantity)
+	for i, item := range req.Items {
+		menuItem, err := restClient.GetMenuItem(context.Background(), &pb.GetMenuItemRequest{
+			RestaurantId: req.RestaurantID,
+			ItemId:       item.MenuItemID,
+		})
+		if err != nil {
+			log.Printf("Menu item not found: %v", err)
+			http.Error(w, "Invalid Menu Item ID", http.StatusBadRequest)
+			return
+		}
+		// Trust the price from the server, not the client
+		req.Items[i].Price = menuItem.Price
+		req.Items[i].Name = menuItem.Name
+		total += menuItem.Price * float64(item.Quantity)
 	}
 
 	order := Order{

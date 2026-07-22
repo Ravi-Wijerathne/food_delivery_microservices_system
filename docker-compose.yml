@@ -16,8 +16,8 @@ services:
 
   auth-service:
     build:
-      context: ./services/auth-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/auth-service/Dockerfile
     ports:
       - "8081:8081"
     environment:
@@ -25,12 +25,28 @@ services:
     depends_on:
       - mongodb
 
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    ports:
+      - "8088:8088"
+      - "9088:9088"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+    depends_on:
+      - mongodb
+
   restaurant-service:
     build:
-      context: ./services/restaurant-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/restaurant-service/Dockerfile
     ports:
       - "8082:8082"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+    depends_on:
+      - mongodb
 
   order-service:
     build:
@@ -42,36 +58,42 @@ services:
     environment:
       - MONGO_URI=mongodb://mongodb:27017
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
+      - USER_SERVICE_GRPC_URL=user-service:9088
+      - RESTAURANT_SERVICE_GRPC_URL=restaurant-service:9082
     depends_on:
       - mongodb
       - rabbitmq
 
   payment-service:
     build:
-      context: ./services
-      dockerfile: payment-service/Dockerfile
+      context: .
+      dockerfile: services/payment-service/Dockerfile
     ports:
       - "8085:8085"
     environment:
+      - MONGO_URI=mongodb://mongodb:27017
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
     depends_on:
+      - mongodb
       - rabbitmq
 
   delivery-service:
     build:
-      context: ./services
-      dockerfile: delivery-service/Dockerfile
+      context: .
+      dockerfile: services/delivery-service/Dockerfile
     ports:
       - "8086:8086"
     environment:
+      - MONGO_URI=mongodb://mongodb:27017
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
     depends_on:
+      - mongodb
       - rabbitmq
 
   notification-service:
     build:
-      context: ./services
-      dockerfile: notification-service/Dockerfile
+      context: .
+      dockerfile: services/notification-service/Dockerfile
     ports:
       - "8087:8087"
     environment:
@@ -81,12 +103,18 @@ services:
 
   gateway:
     build:
-      context: ./gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: gateway/Dockerfile
     ports:
       - "8080:8080"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - USER_SERVICE_URL=http://user-service:8088
+      - RESTAURANT_SERVICE_URL=http://restaurant-service:8082
+      - ORDER_SERVICE_URL=http://order-service:8083
     depends_on:
       - auth-service
+      - user-service
       - restaurant-service
       - order-service
 
