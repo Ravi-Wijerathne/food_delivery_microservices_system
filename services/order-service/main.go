@@ -21,8 +21,7 @@ var mq *common.RabbitMQ
 
 func main() {
 	if err := InitMongoDB(); err != nil {
-		log.Printf("Warning: Failed to connect to MongoDB: %v", err)
-		log.Println("Using in-memory storage")
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 
 	var err error
@@ -31,6 +30,7 @@ func main() {
 		log.Printf("Warning: Failed to connect to RabbitMQ: %v", err)
 	} else {
 		log.Println("Connected to RabbitMQ")
+		startEventConsumers(mq)
 	}
 
 	go func() {

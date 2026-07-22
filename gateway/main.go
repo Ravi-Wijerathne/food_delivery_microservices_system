@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -21,6 +22,11 @@ func main() {
 		restaurantServiceURL = "http://localhost:8082"
 	}
 
+	userServiceURL := os.Getenv("USER_SERVICE_URL")
+	if userServiceURL == "" {
+		userServiceURL = "http://localhost:8088"
+	}
+
 	orderServiceURL := os.Getenv("ORDER_SERVICE_URL")
 	if orderServiceURL == "" {
 		orderServiceURL = "http://localhost:8083"
@@ -30,6 +36,7 @@ func main() {
 
 	api := r.PathPrefix("/api").Subrouter()
 	api.HandleFunc("/health", HealthHandler).Methods("GET")
+	api.Handle("/metrics", promhttp.Handler()).Methods("GET")
 
 	api.HandleFunc("/auth/register", proxyRequest(authServiceURL)).Methods("POST")
 	api.HandleFunc("/auth/login", proxyRequest(authServiceURL)).Methods("POST")
@@ -39,6 +46,7 @@ func main() {
 
 	protected := api.PathPrefix("").Subrouter()
 	protected.Use(JWTMiddleware)
+	protected.HandleFunc("/users/profile", proxyRequest(userServiceURL)).Methods("GET", "PUT")
 	protected.HandleFunc("/orders", proxyRequest(orderServiceURL)).Methods("POST")
 	protected.HandleFunc("/orders/{id}", proxyRequest(orderServiceURL)).Methods("GET")
 

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
-	"sync"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -44,8 +44,6 @@ type OrderItem struct {
 
 var orderClient *mongo.Client
 var orderCollection *mongo.Collection
-var inMemoryOrders = make(map[string]Order)
-var ordersMu sync.RWMutex
 
 func InitMongoDB() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -61,11 +59,11 @@ func InitMongoDB() error {
 
 	c, err := mongo.Connect(ctx, opts)
 	if err != nil {
-		return fmt.Errorf("failed to connect to MongoDB: %w", err)
+		log.Fatalf("failed to connect to MongoDB: %v", err)
 	}
 
 	if err = c.Ping(ctx, nil); err != nil {
-		return fmt.Errorf("failed to ping MongoDB: %w", err)
+		log.Fatalf("failed to ping MongoDB: %v", err)
 	}
 
 	orderClient = c
@@ -77,10 +75,7 @@ func InitMongoDB() error {
 
 func SaveOrder(order Order) error {
 	if orderCollection == nil {
-		ordersMu.Lock()
-		defer ordersMu.Unlock()
-		inMemoryOrders[order.ID] = order
-		return nil
+		return fmt.Errorf("database not initialized")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -92,14 +87,7 @@ func SaveOrder(order Order) error {
 
 func GetOrder(orderID string) (Order, error) {
 	if orderCollection == nil {
-		ordersMu.RLock()
-		defer ordersMu.RUnlock()
-
-		order, ok := inMemoryOrders[orderID]
-		if !ok {
-			return Order{}, ErrOrderNotFound
-		}
-		return order, nil
+		return Order{}, fmt.Errorf("database not initialized")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -112,18 +100,7 @@ func GetOrder(orderID string) (Order, error) {
 
 func UpdateOrderStatus(orderID string, status OrderStatus) error {
 	if orderCollection == nil {
-		ordersMu.Lock()
-		defer ordersMu.Unlock()
-
-		order, ok := inMemoryOrders[orderID]
-		if !ok {
-			return ErrOrderNotFound
-		}
-
-		order.Status = status
-		order.UpdatedAt = time.Now()
-		inMemoryOrders[orderID] = order
-		return nil
+		return fmt.Errorf("database not initialized")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

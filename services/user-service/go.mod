@@ -1,22 +1,26 @@
-module restaurant-service
+module user-service
 
-go 1.26.1
+go 1.26.5
+
+replace common => ../common
+
+replace github.com/food_delivery_microservices_system/proto => ../../proto
 
 require (
 	github.com/food_delivery_microservices_system/proto v0.0.0-00010101000000-000000000000
 	github.com/gorilla/mux v1.8.1
-	go.mongodb.org/mongo-driver v1.14.0
+	go.mongodb.org/mongo-driver v1.17.9
 	google.golang.org/grpc v1.82.1
 )
 
 require (
-	github.com/golang/snappy v0.0.1 // indirect
-	github.com/klauspost/compress v1.13.6 // indirect
-	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
+	github.com/golang/snappy v0.0.4 // indirect
+	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
-	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
@@ -25,5 +29,3 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
-replace github.com/food_delivery_microservices_system/proto => ../../proto
