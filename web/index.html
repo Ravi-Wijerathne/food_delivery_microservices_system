@@ -3,539 +3,393 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gourmet Delivery | Premium Food</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    <title>CravePulse | Distributed Food Delivery Platform</title>
+    <meta name="description" content="Next-generation distributed food delivery platform powered by Go microservices, gRPC, RabbitMQ event bus, and circuit-broken API Gateway.">
+    <meta name="theme-color" content="#07090e">
 
-        :root {
-            --primary: #ff5a5f;
-            --primary-hover: #e0484d;
-            --bg-color: #0f172a;
-            --surface: rgba(30, 41, 59, 0.7);
-            --surface-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-muted: #cbd5e1;
-        }
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-        }
-
-        body {
-            background: var(--bg-color);
-            color: var(--text-main);
-            min-height: 100vh;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(255, 90, 95, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
-            background-attachment: fixed;
-        }
-
-        .glass {
-            background: var(--surface);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--surface-border);
-            border-radius: 16px;
-        }
-
-        header {
-            padding: 24px 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            border-bottom: 1px solid var(--surface-border);
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(10px);
-        }
-
-        header h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(to right, #ff5a5f, #fbbf24);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-
-        .section-title {
-            font-size: 2rem;
-            margin-bottom: 24px;
-            font-weight: 600;
-        }
-
-        /* Forms & Inputs */
-        .form-group {
-            margin-bottom: 16px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--surface-border);
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(255, 90, 95, 0.2);
-        }
-
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        button:hover {
-            background: var(--primary-hover);
-            transform: translateY(-2px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--primary);
-            color: var(--primary);
-        }
-
-        .btn-outline:hover {
-            background: rgba(255, 90, 95, 0.1);
-        }
-
-        /* Layouts */
-        .auth-container {
-            max-width: 400px;
-            margin: 80px auto;
-            padding: 32px;
-        }
-
-        .dashboard {
-            display: none;
-            grid-template-columns: 2fr 1fr;
-            gap: 24px;
-        }
-
-        /* Cards */
-        .restaurants-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            padding: 20px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            cursor: pointer;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            border-color: rgba(255, 90, 95, 0.3);
-        }
-
-        .card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 8px;
-        }
-
-        .card p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            margin-bottom: 4px;
-        }
-
-        /* Menu Modal */
-        .menu-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .menu-content {
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 32px;
-            position: relative;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: transparent;
-            color: white;
-            font-size: 1.5rem;
-            padding: 0;
-        }
-
-        .menu-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px;
-            border-bottom: 1px solid var(--surface-border);
-        }
-
-        .menu-item:last-child {
-            border-bottom: none;
-        }
-
-        /* Order Tracker */
-        .order-panel {
-            padding: 24px;
-            position: sticky;
-            top: 100px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
-        }
-
-        .status-badge.success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-        .status-badge.warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .hidden { display: none !important; }
-    </style>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <header>
-        <h1>Gourmet Delivery</h1>
-        <div id="userProfile" class="hidden">
-            <span id="userNameDisplay" style="margin-right: 15px; color: var(--text-muted);"></span>
-            <button class="btn-outline" onclick="logout()" style="padding: 8px 16px;">Logout</button>
+
+    <!-- ==========================================================================
+         TOP GLOBAL HEADER
+         ========================================================================== -->
+    <header class="app-header">
+        <a class="brand-wrapper" onclick="app.switchTab('restaurants')">
+            <div class="brand-icon-box">
+                <span>⚡</span>
+                <span class="pulse-indicator"></span>
+            </div>
+            <div>
+                <span class="brand-title">CravePulse</span>
+                <span class="brand-sub">Microservices Delivery</span>
+            </div>
+        </a>
+
+        <div class="header-actions">
+            <!-- Gateway Connection Badge -->
+            <div id="gatewayBadge" class="gateway-badge simulated" onclick="app.toggleConnectionMode()" title="Click to toggle between Real Gateway and Simulated Event Bus">
+                <span class="gateway-badge-dot"></span>
+                <span>Connecting...</span>
+            </div>
+
+            <!-- Main Navigation Links -->
+            <button id="navBtn_restaurants" class="nav-btn active" onclick="app.switchTab('restaurants')">
+                <span>🍽️</span> <span>Restaurants</span>
+            </button>
+            <button id="navBtn_orders" class="nav-btn" onclick="app.switchTab('orders')">
+                <span>📦</span> <span>Live Orders</span>
+            </button>
+            <button id="navBtn_observability" class="nav-btn" onclick="app.switchTab('observability')">
+                <span>📊</span> <span>Architecture</span>
+            </button>
+
+            <!-- Slide-over Cart Trigger -->
+            <button class="cart-btn-trigger" onclick="app.toggleCart(true)">
+                <span>🛒</span>
+                <span>Cart</span>
+                <span id="cartBadgeCount" class="cart-counter">0</span>
+            </button>
+
+            <!-- Profile Pill Trigger -->
+            <div class="profile-pill" onclick="app.openProfileModal()">
+                <div id="userAvatarLetter" class="profile-avatar">A</div>
+                <span id="userNameDisplay" style="font-size: 0.85rem; font-weight: 600;">Alex Vance</span>
+            </div>
         </div>
     </header>
 
-    <div class="container">
-        <!-- Auth Section -->
-        <div id="authSection" class="glass auth-container">
-            <h2 class="section-title" style="text-align: center; font-size: 1.5rem;">Welcome Back</h2>
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="email" placeholder="Enter your email" value="test@example.com">
+    <!-- ==========================================================================
+         HERO & SEARCH SECTION
+         ========================================================================== -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <div class="hero-eyebrow">
+                <span>🚀</span> High-Throughput Event-Driven Ordering
             </div>
-            <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="password" placeholder="••••••••" value="password123">
-            </div>
-            <div class="form-group hidden" id="registerFields">
-                <label>Name</label>
-                <input type="text" id="name" placeholder="John Doe">
-            </div>
-            <button style="width: 100%; margin-top: 10px;" onclick="handleAuth()">Sign In</button>
-            <p style="text-align: center; margin-top: 16px; color: var(--text-muted); font-size: 0.9rem;">
-                Don't have an account? <a href="#" style="color: var(--primary);" onclick="toggleRegister()">Sign Up</a>
+            <h1 class="hero-title">
+                Artisanal Food Delivered via <span>Distributed Microservices</span>
+            </h1>
+            <p class="hero-subtitle">
+                Explore hand-crafted menus validated via gRPC, routed through an API Gateway, and dispatched in real-time over a RabbitMQ event pipeline.
             </p>
         </div>
 
-        <!-- Main Dashboard -->
-        <div id="dashboardSection" class="dashboard">
-            <!-- Left: Restaurants -->
-            <div>
-                <h2 class="section-title">Discover Restaurants</h2>
-                <div id="restaurantsList" class="restaurants-grid">
-                    <!-- Loading skeleton or populated via JS -->
-                    <p style="color: var(--text-muted);">Loading premium restaurants...</p>
-                </div>
-            </div>
-
-            <!-- Right: Active Order Tracking -->
-            <div>
-                <div class="glass order-panel">
-                    <h3 style="margin-bottom: 20px;">Active Order</h3>
-                    <div id="noOrderState">
-                        <p style="color: var(--text-muted); font-size: 0.9rem;">You have no active orders. Browse restaurants to place an order.</p>
-                    </div>
-                    <div id="activeOrderState" class="hidden">
-                        <h4 id="orderRestName" style="margin-bottom: 8px;">Restaurant Name</h4>
-                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;" id="orderItems">Items...</p>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <span>Total:</span>
-                            <strong style="font-size: 1.2rem;" id="orderTotal">$0.00</strong>
-                        </div>
-
-                        <div>
-                            <span class="status-badge pulse" id="orderStatusBadge">CREATED</span>
-                        </div>
-                        
-                        <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-muted);">
-                            Order ID: <span id="orderIdDisplay">...</span>
-                        </p>
-                    </div>
-                </div>
+        <!-- Search Bar -->
+        <div class="search-container">
+            <div class="search-input-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" class="search-input" placeholder="Search by restaurant name, cuisine, or favorite dish...">
             </div>
         </div>
-    </div>
 
-    <!-- Menu Modal -->
-    <div id="menuModal" class="menu-modal" style="display: none;">
-        <div class="glass menu-content">
-            <button class="close-btn" onclick="closeMenu()">×</button>
-            <h2 id="modalRestName" class="section-title">Restaurant Menu</h2>
-            <div id="modalMenuItems"></div>
+        <!-- Cuisine Filter Pills -->
+        <div class="categories-bar">
+            <button class="filter-pill active" data-cuisine="all">✨ All Cuisines</button>
+            <button class="filter-pill" data-cuisine="Italian">🍕 Italian Pizza</button>
+            <button class="filter-pill" data-cuisine="American">🍔 Burgers & Grill</button>
+            <button class="filter-pill" data-cuisine="Japanese">🍣 Japanese Sushi</button>
+            <button class="filter-pill" data-cuisine="Mexican">🌮 Street Tacos</button>
+            <button class="filter-pill" data-cuisine="Indian">🍛 Indian Curry</button>
         </div>
-    </div>
+    </section>
 
-    <script>
-        const API = 'http://localhost:8080/api';
-        let token = localStorage.getItem('token') || '';
-        let isRegistering = false;
-        let currentUser = null;
-        let activeOrderId = null;
-        let orderPollInterval = null;
+    <!-- ==========================================================================
+         MAIN VIEWS CONTAINER
+         ========================================================================== -->
+    <main class="main-view-container">
 
-        // Init check
-        if (token) {
-            fetchProfile();
-        }
+        <!-- TAB 1: RESTAURANTS VIEW -->
+        <section id="restaurantsView" class="view-section active">
+            <div class="restaurants-header">
+                <h2 class="section-heading">
+                    <span>Featured Restaurants</span>
+                    <span id="restaurantCount" class="section-counter">Loading...</span>
+                </h2>
+            </div>
+            <div id="restaurantsGrid" class="restaurants-grid">
+                <!-- Dynamically populated via app.js -->
+            </div>
+        </section>
 
-        function toggleRegister() {
-            isRegistering = !isRegistering;
-            document.getElementById('registerFields').classList.toggle('hidden', !isRegistering);
-            document.querySelector('#authSection button').textContent = isRegistering ? 'Sign Up' : 'Sign In';
-            document.querySelector('#authSection p a').textContent = isRegistering ? 'Sign In' : 'Sign Up';
-        }
+        <!-- TAB 2: LIVE ORDERS & PIPELINE TRACKING VIEW -->
+        <section id="ordersView" class="view-section">
+            <h2 class="section-heading" style="margin-bottom: 24px;">Active Order Tracker</h2>
 
-        async function handleAuth() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const name = document.getElementById('name').value;
-            
-            const endpoint = isRegistering ? '/auth/register' : '/auth/login';
-            const payload = isRegistering ? { email, password, name } : { email, password };
+            <div id="noActiveOrderMsg" class="glass-panel" style="text-align: center; padding: 60px 20px;">
+                <p style="font-size: 3rem; margin-bottom: 14px;">📦</p>
+                <h3 style="font-size: 1.4rem; margin-bottom: 8px;">No Active Order In Progress</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Select dishes from any restaurant to trigger the RabbitMQ event pipeline.</p>
+                <button class="add-cart-btn" style="margin: 0 auto;" onclick="app.switchTab('restaurants')">Browse Restaurants</button>
+            </div>
 
-            try {
-                const res = await fetch(`${API}${endpoint}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (data.token) {
-                    token = data.token;
-                    localStorage.setItem('token', token);
-                    fetchProfile();
-                } else {
-                    alert('Auth failed: ' + (data.message || 'Unknown error'));
-                }
-            } catch (e) {
-                alert('Connection error');
-            }
-        }
-
-        async function fetchProfile() {
-            try {
-                const res = await fetch(`${API}/users/profile`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (res.ok) {
-                    currentUser = await res.json();
-                    document.getElementById('authSection').classList.add('hidden');
-                    document.getElementById('dashboardSection').style.display = 'grid';
-                    document.getElementById('userProfile').classList.remove('hidden');
-                    document.getElementById('userNameDisplay').textContent = `Hello, ${currentUser.name || currentUser.email}`;
-                    loadRestaurants();
-                } else {
-                    logout();
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        function logout() {
-            token = '';
-            localStorage.removeItem('token');
-            currentUser = null;
-            document.getElementById('authSection').classList.remove('hidden');
-            document.getElementById('dashboardSection').style.display = 'none';
-            document.getElementById('userProfile').classList.add('hidden');
-            if (orderPollInterval) clearInterval(orderPollInterval);
-        }
-
-        async function loadRestaurants() {
-            try {
-                const res = await fetch(`${API}/restaurants`);
-                const data = await res.json();
-                const container = document.getElementById('restaurantsList');
-                container.innerHTML = data.map(r => `
-                    <div class="glass card" onclick="openMenu('${r.id}', '${r.name}')">
-                        <h3>${r.name}</h3>
-                        <p>${r.cuisine} • ⭐ ${r.rating}</p>
-                        <p style="font-size: 0.8rem; margin-top: 10px;">📍 ${r.address}</p>
-                    </div>
-                `).join('');
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        async function openMenu(restId, restName) {
-            document.getElementById('modalRestName').textContent = restName;
-            document.getElementById('modalMenuItems').innerHTML = '<p>Loading menu...</p>';
-            document.getElementById('menuModal').style.display = 'flex';
-
-            try {
-                const res = await fetch(`${API}/menu/${restId}`);
-                const data = await res.json();
-                
-                document.getElementById('modalMenuItems').innerHTML = data.items.map(item => `
-                    <div class="menu-item">
+            <div id="activeOrderCard" class="tracking-wrapper" style="display: none;">
+                <!-- Left: Pipeline & Status -->
+                <div class="glass-panel tracking-card">
+                    <div class="order-badge-row">
                         <div>
-                            <h4 style="margin-bottom: 4px;">${item.name}</h4>
-                            <p style="color: var(--text-muted); font-size: 0.85rem;">${item.description}</p>
-                            <p style="color: var(--primary); font-weight: 600; margin-top: 4px;">$${item.price.toFixed(2)}</p>
+                            <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Order Tracking</span>
+                            <div id="trackOrderId" class="order-id-tag">order-XXXXX</div>
                         </div>
-                        <button onclick="placeOrder('${restId}', '${item.id}', '${item.name}', ${item.price})">Order</button>
+                        <div id="trackStatusPill" class="live-status-pill created">CREATED</div>
                     </div>
-                `).join('');
-            } catch (e) {
-                document.getElementById('modalMenuItems').innerHTML = '<p>Failed to load menu</p>';
-            }
-        }
 
-        function closeMenu() {
-            document.getElementById('menuModal').style.display = 'none';
-        }
-
-        async function placeOrder(restId, itemId, itemName, price) {
-            closeMenu();
-            
-            try {
-                const res = await fetch(`${API}/orders`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        user_id: currentUser.id,
-                        restaurant_id: restId,
-                        delivery_address: currentUser.address || 'Default Address',
-                        items: [{
-                            menu_item_id: itemId,
-                            name: itemName,
-                            quantity: 1,
-                            price: price
-                        }]
-                    })
-                });
-                
-                const data = await res.json();
-                if (data.id) {
-                    startTrackingOrder(data);
-                } else {
-                    alert('Order failed');
-                }
-            } catch (e) {
-                alert('Order request failed');
-            }
-        }
-
-        function startTrackingOrder(order) {
-            activeOrderId = order.id;
-            document.getElementById('noOrderState').classList.add('hidden');
-            document.getElementById('activeOrderState').classList.remove('hidden');
-            
-            updateOrderUI(order);
-
-            if (orderPollInterval) clearInterval(orderPollInterval);
-            
-            orderPollInterval = setInterval(async () => {
-                try {
-                    const res = await fetch(`${API}/orders/${activeOrderId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    const updatedOrder = await res.json();
-                    updateOrderUI(updatedOrder);
+                    <h3 id="trackRestName" style="font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 4px;">Restaurant Name</h3>
+                    <p id="trackItemsSummary" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px;">Items...</p>
                     
-                    if (updatedOrder.status === 'DELIVERED' || updatedOrder.status === 'CANCELLED') {
-                        clearInterval(orderPollInterval);
-                        document.getElementById('orderStatusBadge').classList.remove('pulse');
-                    }
-                } catch (e) {
-                    console.error("Polling error", e);
-                }
-            }, 2000);
-        }
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 14px 18px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid var(--border-subtle);">
+                        <span style="color: var(--text-secondary); font-size: 0.95rem;">Order Total:</span>
+                        <strong id="trackTotal" style="font-size: 1.35rem; color: var(--accent-orange);">$0.00</strong>
+                    </div>
 
-        function updateOrderUI(order) {
-            document.getElementById('orderIdDisplay').textContent = order.id;
-            document.getElementById('orderTotal').textContent = `$${order.total_amount.toFixed(2)}`;
-            document.getElementById('orderItems').textContent = order.items.map(i => `${i.quantity}x ${i.name}`).join(', ');
+                    <!-- Microservices Event Pipeline -->
+                    <h4 style="font-family: var(--font-heading); font-size: 1.1rem; margin-bottom: 16px;">Microservice Event Bus Pipeline</h4>
+                    <div id="eventPipelineList" class="event-pipeline">
+                        <!-- Populated dynamically via app.js -->
+                    </div>
+
+                    <!-- Force Deliver Trigger (For Demo / Testing) -->
+                    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Testing controls:</span>
+                        <button class="nav-btn" style="font-size: 0.8rem; padding: 6px 14px;" onclick="window.apiService.forceDeliverOrder(document.getElementById('trackOrderId').textContent)">
+                            ⚡ Fast-Forward to Delivered
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Animated Route Map & Driver -->
+                <div>
+                    <div class="glass-panel tracking-card">
+                        <h4 style="font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 14px;">Live Dispatch Radar</h4>
+                        <div id="routeMapContainer" class="route-map-box">
+                            <!-- SVG Animated Route -->
+                        </div>
+
+                        <!-- Driver Info Card -->
+                        <div id="driverCardBox" class="driver-info-card" style="display: none;">
+                            <div id="driverAvatar" class="driver-avatar-circle">🛵</div>
+                            <div style="flex: 1;">
+                                <h4 id="driverName" style="font-family: var(--font-heading); font-size: 1.05rem; margin-bottom: 2px;">Sarah Jenkins</h4>
+                                <p id="driverVehicle" style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">Honda PCX 160</p>
+                                <span id="driverPhone" style="font-size: 0.8rem; color: var(--accent-cyan); font-weight: 700;">+1 (555) 234-8901</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Past Orders List -->
+                    <div class="glass-panel" style="padding: 24px; margin-top: 24px;">
+                        <h4 style="font-family: var(--font-heading); font-size: 1.15rem; margin-bottom: 14px;">Order History</h4>
+                        <div id="pastOrdersGrid">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: MICROSERVICES OBSERVABILITY HUB -->
+        <section id="observabilityView" class="view-section">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px;">
+                <div>
+                    <h2 class="section-heading">Distributed System Topology</h2>
+                    <p style="color: var(--text-secondary); font-size: 0.95rem;">
+                        Real-time status of all 7 Golang microservices, API Gateway with Circuit Breakers, and the RabbitMQ messaging broker.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <a href="http://localhost:8080/metrics" target="_blank" class="nav-btn" style="text-decoration: none;">
+                        <span>📈</span> <span>Prometheus Metrics</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Microservices Grid -->
+            <div id="servicesGrid" class="observability-grid">
+                <!-- Dynamically populated via app.js -->
+            </div>
+
+            <!-- Real-time AMQP Event Bus Terminal -->
+            <div class="event-bus-terminal">
+                <div class="terminal-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.1rem;">🐇</span>
+                        <strong style="font-family: var(--font-heading); font-size: 1rem; color: white;">RabbitMQ Event Bus Live Stream</strong>
+                        <span style="font-size: 0.75rem; background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); padding: 3px 8px; border-radius: 999px;">
+                            Topic: food.delivery.events
+                        </span>
+                    </div>
+                    <button class="nav-btn" style="padding: 4px 10px; font-size: 0.75rem;" onclick="localStorage.removeItem('crave_event_log'); app.renderTerminalLogs();">
+                        Clear Logs
+                    </button>
+                </div>
+                <div id="terminalLogEntries" class="terminal-logs">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==========================================================================
+         MENU MODAL
+         ========================================================================== -->
+    <div id="menuModal" class="modal-backdrop">
+        <div class="modal-box">
+            <button class="modal-close-btn" onclick="app.closeMenuModal()">×</button>
+            <div class="menu-hero-header">
+                <img id="modalRestImg" src="" alt="Menu Hero" class="menu-hero-img">
+                <div class="menu-hero-overlay">
+                    <h2 id="modalRestName" class="menu-rest-title">Restaurant Name</h2>
+                    <p id="modalRestAddress" class="menu-rest-address">123 Main St</p>
+                </div>
+            </div>
+            <div id="modalMenuItems" class="menu-items-container">
+                <!-- Dishes populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         SLIDE-OVER SHOPPING CART DRAWER
+         ========================================================================== -->
+    <div id="cartOverlay" class="cart-overlay" onclick="if(event.target === this) app.toggleCart(false)">
+        <div class="cart-drawer">
+            <div class="cart-header">
+                <div>
+                    <h3>Your Cart</h3>
+                    <p id="cartRestTitle" style="font-size: 0.8rem; color: var(--text-secondary);">From Restaurant</p>
+                </div>
+                <button class="modal-close-btn" style="position: static;" onclick="app.toggleCart(false)">×</button>
+            </div>
+
+            <!-- Empty Cart State -->
+            <div id="cartEmptyState" style="text-align: center; padding: 80px 20px; flex: 1;">
+                <p style="font-size: 3rem; margin-bottom: 12px;">🛒</p>
+                <h4 style="font-size: 1.2rem; margin-bottom: 6px;">Your cart is empty</h4>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Browse our restaurant menus and add some delicious items!</p>
+            </div>
+
+            <!-- Cart Items List -->
+            <div id="cartItemsList" class="cart-items-list" style="display: none;">
+                <!-- Populated dynamically -->
+            </div>
+
+            <!-- Cart Footer & Checkout -->
+            <div id="cartFooter" class="cart-footer" style="display: none;">
+                <!-- Delivery Address Selector -->
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label class="form-label">📍 Delivery Address</label>
+                    <input type="text" id="checkoutAddressInput" class="form-input" value="742 Evergreen Terrace, Apt 4B, Springfield">
+                </div>
+
+                <div class="cost-row">
+                    <span>Subtotal</span>
+                    <strong id="cartSubtotal">$0.00</strong>
+                </div>
+                <div class="cost-row">
+                    <span>Delivery Fee (Orders over $35 Free)</span>
+                    <span id="cartDeliveryFee">$3.99</span>
+                </div>
+                <div class="cost-row">
+                    <span>Estimated Tax (8.25%)</span>
+                    <span id="cartTax">$0.00</span>
+                </div>
+                <div class="cost-row total-row">
+                    <span>Total Amount</span>
+                    <span id="cartTotal" style="color: var(--accent-orange);">$0.00</span>
+                </div>
+
+                <button id="checkoutSubmitBtn" class="checkout-btn" onclick="app.handleCheckout()">
+                    <span>Place Order (RabbitMQ Bus)</span>
+                    <span>→</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         USER PROFILE MODAL
+         ========================================================================== -->
+    <div id="profileModal" class="modal-backdrop">
+        <div class="modal-box auth-box">
+            <button class="modal-close-btn" onclick="app.closeProfileModal()">×</button>
+            <h3 style="font-family: var(--font-heading); font-size: 1.6rem; margin-bottom: 4px;">User Profile</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px;">Synchronized with User Service (Port 8088)</p>
+
+            <form onsubmit="app.handleProfileSave(event)">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="profileNameInput" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" id="profileEmailInput" class="form-input" disabled style="opacity: 0.6;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="text" id="profilePhoneInput" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Default Delivery Address</label>
+                    <input type="text" id="profileAddressInput" class="form-input" required>
+                </div>
+                <button type="submit" class="auth-submit-btn">Save Changes</button>
+            </form>
+
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between;">
+                <button class="nav-btn" style="font-size: 0.8rem;" onclick="app.closeProfileModal(); app.openAuthModal();">Switch Account</button>
+                <button class="nav-btn" style="font-size: 0.8rem; color: #ef4444;" onclick="window.apiService.logout(); location.reload();">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+         AUTHENTICATION MODAL
+         ========================================================================== -->
+    <div id="authModal" class="modal-backdrop">
+        <div class="modal-box auth-box">
+            <button class="modal-close-btn" onclick="app.closeAuthModal()">×</button>
             
-            const badge = document.getElementById('orderStatusBadge');
-            badge.textContent = order.status;
-            
-            // Adjust badge colors dynamically based on status
-            if (order.status === 'CREATED') {
-                badge.className = 'status-badge pulse';
-            } else if (order.status === 'PaymentProcessed' || order.status === 'CONFIRMED' || order.status === 'PREPARING') {
-                badge.className = 'status-badge warning pulse';
-            } else if (order.status === 'DeliveryAssigned' || order.status === 'DELIVERED') {
-                badge.className = 'status-badge success';
-                if (order.status !== 'DELIVERED') badge.classList.add('pulse');
-            }
-        }
-    </script>
+            <div class="auth-tabs">
+                <button id="authTabLogin" class="auth-tab-btn active" onclick="app.switchAuthTab('login')">Sign In</button>
+                <button id="authTabRegister" class="auth-tab-btn" onclick="app.switchAuthTab('register')">Sign Up</button>
+            </div>
+
+            <form onsubmit="app.handleAuthSubmit(event)">
+                <div id="authNameGroup" class="form-group" style="display: none;">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="authName" class="form-input" placeholder="e.g. Alex Vance">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="authEmail" class="form-input" value="test@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="authPassword" class="form-input" value="password123" required>
+                </div>
+                <button type="submit" id="authSubmitBtn" class="auth-submit-btn">Sign In</button>
+            </form>
+
+            <p style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 18px;">
+                Verified with Auth Service (Port 8081) via JWT HMAC-SHA256
+            </p>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- JavaScript Scripts -->
+    <script src="js/mock-data.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
