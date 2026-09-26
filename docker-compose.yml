@@ -5,6 +5,8 @@ services:
     image: mongo:latest
     ports:
       - "27017:27017"
+    environment:
+      - GLIBC_TUNABLES=glibc.pthread.rseq=1
     volumes:
       - mongodb_data:/data/db
 

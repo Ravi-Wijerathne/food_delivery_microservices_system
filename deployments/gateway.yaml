@@ -23,6 +23,8 @@ spec:
         env:
         - name: AUTH_SERVICE_URL
           value: "http://auth-service:8081"
+        - name: USER_SERVICE_URL
+          value: "http://user-service:8088"
         - name: RESTAURANT_SERVICE_URL
           value: "http://restaurant-service:8082"
         - name: ORDER_SERVICE_URL

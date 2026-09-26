@@ -12,6 +12,8 @@ import (
 func RegisterRoutes(r *mux.Router) {
 	r.HandleFunc("/profile", GetProfileHandler).Methods("GET")
 	r.HandleFunc("/profile", UpdateProfileHandler).Methods("PUT")
+	r.HandleFunc("/users/profile", GetProfileHandler).Methods("GET")
+	r.HandleFunc("/users/profile", UpdateProfileHandler).Methods("PUT")
 	r.HandleFunc("/health", HealthHandler).Methods("GET")
 }
 
